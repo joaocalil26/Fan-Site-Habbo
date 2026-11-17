@@ -1,0 +1,51 @@
+{
+  "name": "idblet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "node --env-file=.env prisma/seed-idblet.ts",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "node --env-file=.env scripts/integration-test.mjs",
+    "test:catalog": "node scripts/test-catalog.mjs",
+    "test:seasonal": "node --env-file=.env scripts/test-seasonal.mjs",
+    "test:radio": "node --env-file=.env scripts/test-radio.mjs",
+    "format": "prettier --write --ignore-unknown .",
+    "format:check": "prettier --check --ignore-unknown .",
+    "test:gifts": "node --env-file=.env scripts/test-gifts.mjs",
+    "test:profile": "node --env-file=.env scripts/test-profile.mjs"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.7.4",
+    "@prisma/client": "^6.5.0",
+    "bcryptjs": "^2.4.3",
+    "next": "16.4.6",
+    "next-auth": "^5.0.0-beta.25",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "prettier": "3.10.1",
+    "prisma": "^6.5.0",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

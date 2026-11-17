@@ -1,0 +1,106 @@
+﻿@import "tailwindcss";
+:root {
+  --background: #f7f6f0;
+  --foreground: #292d26;
+  --card: #fffefa;
+  --card-hover: #f6f1e5;
+  --primary: #e9ad4b;
+  --primary-hover: #d79937;
+  --accent: #cc783f;
+  --muted: #929184;
+  --border: #e8e5da;
+  --success: #547c52;
+  --warning: #c5943a;
+  --danger: #c45f50;
+  --font-app-sans: Montserrat, Arial, sans-serif;
+  --font-app-mono: Consolas, monospace;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-app-sans);
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f0ede2;
+}
+::-webkit-scrollbar-thumb {
+  background: #c8bea3;
+  border-radius: 5px;
+}
+.card-lift {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px #382e1910;
+}
+.level-bar {
+  background: linear-gradient(90deg, #d99a3d, #efc778);
+}
+.text-gradient {
+  color: #b68d43;
+}
+.compact-player {
+  position: fixed;
+  bottom: 17px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.compact-player strong,
+.compact-player small {
+  display: block;
+}
+.compact-player small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

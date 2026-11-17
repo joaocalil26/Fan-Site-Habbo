@@ -1,0 +1,417 @@
+// Schema Prisma para MySQL
+// Índices compostos cobrem os padrões de leitura mais comuns
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ======================
+// USERS & AUTH
+// ======================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  username      String?   @unique
+  passwordHash  String?
+  name          String?
+  avatar        String?
+  image         String?   // Auth.js / OAuth
+  bio           String?   @db.Text
+  coverImage    String?   @db.Text
+  signature     String?   @db.Text
+  signatureImage String?  @db.Text
+
+  level         Int       @default(1)
+  xp            Int       @default(0)
+  rank          String    @default("Iniciante")
+
+  isPremium     Boolean   @default(false)
+  premiumUntil  DateTime?
+
+  role          Role      @default(USER)
+  isBanned      Boolean   @default(false)
+  sessionVersion Int      @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastSeenAt    DateTime?
+
+  threads       ForumThread[]
+  posts         ForumPost[]
+  userEmblems   UserEmblem[]
+  subscriptions Subscription[]
+  giftClaims    GiftClaim[]
+
+  entries       ContentEntry[]
+  comments      Comment[]
+  reactions     Reaction[]
+
+  // Auth.js
+  accounts      Account[]
+  sessions      Session[]
+
+  @@index([level(sort: Desc), xp(sort: Desc)])
+  @@index([isPremium, premiumUntil])
+  @@index([username])
+}
+
+// ======================
+// AUTH.JS (NextAuth)
+// ======================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// ======================
+// EMBLEMS
+// ======================
+
+model Emblem {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  image       String   @db.Text
+  rarity      Rarity   @default(COMUM)
+  isLimited   Boolean  @default(false)
+  releasedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  owners      UserEmblem[]
+  eventRewards EventReward[]
+
+  // Listagens: "recentes por raridade" e "últimos lançados"
+  @@index([rarity, releasedAt(sort: Desc)])
+  @@index([releasedAt(sort: Desc)])
+  @@index([isLimited, releasedAt(sort: Desc)])
+}
+
+enum Rarity {
+  COMUM
+  RARO
+  EPICO
+  LENDARIO
+}
+
+model UserEmblem {
+  id         String   @id @default(cuid())
+  userId     String
+  emblemId   String
+  obtainedAt DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emblem     Emblem   @relation(fields: [emblemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, emblemId])
+  // Perfil: emblemas do usuário ordenados por data
+  @@index([userId, obtainedAt(sort: Desc)])
+  // Contagem / "quem tem este emblema"
+  @@index([emblemId])
+}
+
+// ======================
+// NEWS
+// ======================
+
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?   @db.Text
+  content     String   @db.LongText
+  category    String
+  image       String?   @db.Text
+  views       Int      @default(0)
+  published   Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  authorId    String?
+  comments    Comment[]
+
+  // Feed principal: só publicadas, mais recentes
+  @@index([published, publishedAt(sort: Desc)])
+  // Filtro por categoria no feed
+  @@index([published, category, publishedAt(sort: Desc)])
+  // Ranking por views (hot)
+  @@index([published, views(sort: Desc)])
+}
+
+// ======================
+// FORUM
+// ======================
+
+model ForumCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  threads     ForumThread[]
+
+  @@index([order])
+}
+
+model ForumThread {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String   @db.LongText
+  pinned      Boolean  @default(false)
+  locked      Boolean  @default(false)
+  views       Int      @default(0)
+  // Cache de contagem — evita COUNT(*) a cada listagem
+  replyCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastPostAt  DateTime @default(now())
+
+  authorId    String
+  categoryId  String
+
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category    ForumCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  posts       ForumPost[]
+
+  // Listagem padrão: fixados primeiro, depois atividade recente
+  @@index([categoryId, pinned(sort: Desc), lastPostAt(sort: Desc)])
+  // Feed global do fórum
+  @@index([pinned(sort: Desc), lastPostAt(sort: Desc)])
+  // Threads de um autor
+  @@index([authorId, createdAt(sort: Desc)])
+}
+
+model ForumPost {
+  id          String   @id @default(cuid())
+  content     String   @db.LongText
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authorId    String
+  threadId    String
+
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  thread      ForumThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Posts de um tópico em ordem
+  @@index([threadId, createdAt])
+  // Histórico de posts do usuário
+  @@index([authorId, createdAt(sort: Desc)])
+}
+
+// ======================
+// SUBSCRIPTIONS
+// ======================
+
+model Subscription {
+  id            String    @id @default(cuid())
+  userId        String
+  plan          Plan
+  status        SubStatus @default(ACTIVE)
+  startsAt      DateTime  @default(now())
+  endsAt        DateTime
+  externalId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Assinatura ativa de um usuário
+  @@index([userId, status])
+  // Jobs de expiração / renovação
+  @@index([status, endsAt])
+  @@index([externalId])
+}
+
+enum Plan {
+  PREMIUM_MONTHLY
+  PREMIUM_YEARLY
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+  PAST_DUE
+}
+
+// ======================
+// MOBIS
+// ======================
+
+model Mobi {
+  id        String   @id @default(cuid())
+  name      String
+  image     String   @db.Text
+  price     Int
+  isLimited Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([isLimited, createdAt(sort: Desc)])
+  @@index([price])
+}
+
+
+// Content owned and managed by the IdBlet installation.
+enum ContentKind {
+  EVENT
+  ART
+  PODCAST
+  PAGE
+  BANNER
+  TEAM
+}
+
+model ContentEntry {
+  id          String      @id @default(cuid())
+  kind        ContentKind
+  title       String
+  slug        String      @unique
+  excerpt     String?     @db.Text
+  content     String      @db.LongText
+  image       String?     @db.Text
+  mediaUrl    String?     @db.Text
+  status      String      @default("Publicado")
+  published   Boolean     @default(false)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  order       Int         @default(0)
+  views       Int         @default(0)
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id])
+  comments    Comment[]
+  giftEnabled Boolean @default(false)
+  rewards     EventReward[]
+  giftClaims  GiftClaim[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  @@index([kind, published, order, createdAt])
+}
+
+model EventReward {
+  eventId String
+  emblemId String
+  event ContentEntry @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  emblem Emblem @relation(fields: [emblemId], references: [id], onDelete: Restrict)
+  @@id([eventId, emblemId])
+}
+
+model GiftClaim {
+  id String @id @default(cuid())
+  eventId String
+  userId String
+  createdAt DateTime @default(now())
+  event ContentEntry @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([eventId, userId])
+}
+
+model Comment {
+  id          String       @id @default(cuid())
+  content     String       @db.Text
+  hidden      Boolean      @default(false)
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  newsId      String?
+  news        News?        @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  entryId     String?
+  entry       ContentEntry? @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  @@index([newsId, hidden, createdAt])
+  @@index([entryId, hidden, createdAt])
+}
+
+model Reaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType  String
+  targetId    String
+  createdAt   DateTime @default(now())
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model SiteSetting {
+  id          String   @id @default("site")
+  data        Json
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String
+  action      String
+  resource    String
+  recordId    String
+  createdAt   DateTime @default(now())
+  @@index([createdAt])
+}
+
+model AuthThrottle {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  userId     String
+  targetType String
+  targetId   String
+  content    String   @db.Text
+  status     String   @default("Aberta")
+  createdAt  DateTime @default(now())
+  @@index([status, createdAt])
+}
