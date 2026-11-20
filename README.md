@@ -22,7 +22,7 @@
 
 O **IdBlet** é um fã-site com identidade visual própria, inspirado na estética pixel art dos hotéis virtuais. Reúne publicações, interações entre membros e rádio online em uma interface responsiva com tons de dourado e laranja.
 
-Este repositório integra o portfólio de **João Calil, estudante de Engenharia de Software**, e apresenta a aplicação de conceitos de desenvolvimento web: modelagem relacional, autenticação, autorização, integração com APIs e testes de fluxos completos.
+Este repositório integra o portfólio, e apresenta a aplicação de conceitos de desenvolvimento web: modelagem relacional, autenticação, autorização, integração com APIs e testes de fluxos completos.
 
 <img src="public/idblet-studio.svg" alt="Ilustração do estúdio da rádio IdBlet" width="100%" />
 
